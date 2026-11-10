@@ -139,5 +139,6 @@ The Flutter code at the repository root is reference only. The
   app is expected to be non-functional (no webview) at runtime. The build log
   and bundle are uploaded as `legacy-linux-flutter-diagnostics`.
 
-These are not production artifacts. The native Windows client in `native/` is
-the shipping app.
+These are not production artifacts. The workflow publishes them to a separate
+`legacy-flutter` prerelease; the production `v2.0.0` release contains only the
+native Windows installer.
