@@ -41,7 +41,7 @@ automatically asks WebView2 for software rendering.
 
 1. Uninstall the old Flutter/vendor ARA Assessment v1.x first (Apps & Features).
    The installer refuses to coexist with it.
-2. Download `ARA_Assessment_Setup_v2.0.0.exe` from GitHub Releases.
+2. Download `ARA_Assessment_Setup_v2.0.1.exe` from GitHub Releases.
 3. Verify it against `SHA256SUMS.txt`.
 4. Run it as administrator. The installer checks the OS build, Windows 7
    SHA-2/servicing-stack updates, .NET 4.8, Visual C++ 2015–2022, WebView2
@@ -57,7 +57,7 @@ by default.
 Build host: Windows 10/11 with the .NET 8 SDK, PowerShell, and Inno Setup 6.4.x.
 
 ```powershell
-./native/scripts/build.ps1 -Version 2.0.0 -SupervisorPin "your-pin"
+./native/scripts/build.ps1 -Version 2.0.1 -SupervisorPin "your-pin"
 ```
 
 The script restores, runs the 56 unit tests, builds x64 and x86, downloads and
@@ -67,7 +67,7 @@ certificate is supplied, and writes `SHA256SUMS.txt`.
 Output:
 
 ```
-native/build/installer/ARA_Assessment_Setup_v2.0.0.exe
+native/build/installer/ARA_Assessment_Setup_v2.0.1.exe
 native/build/installer/SHA256SUMS.txt
 ```
 
@@ -90,8 +90,8 @@ Add these repository secrets:
 Release:
 
 ```powershell
-git tag v2.0.0
-git push origin v2.0.0
+git tag v2.0.1
+git push origin v2.0.1
 ```
 
 The workflow uploads the installer + `SHA256SUMS.txt` as artifacts and attaches
@@ -140,5 +140,5 @@ The Flutter code at the repository root is reference only. The
   and bundle are uploaded as `legacy-linux-flutter-diagnostics`.
 
 These are not production artifacts. The workflow publishes them to a separate
-`legacy-flutter` prerelease; the production `v2.0.0` release contains only the
+`legacy-flutter` prerelease; the production `v2.0.1` release contains only the
 native Windows installer.
