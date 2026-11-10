@@ -127,8 +127,16 @@ folder):
 - The kiosk is a user-mode deterrent, not a security boundary. Use Windows
   policies or Assigned Access where a stronger boundary is required.
 
-## Legacy
+## Legacy Flutter builds
 
-The Flutter code at the repository root is retained as reference only. The
-macOS Flutter release workflow has been removed; the production release is the
-native Windows client in `native/`.
+The Flutter code at the repository root is reference only. The
+`legacy-flutter.yml` workflow builds it on macOS and Linux:
+
+- macOS: `scripts/build_macos.sh` produces `build/macos/*.pkg` and `*.dmg`
+  artifacts (`legacy-macos-flutter`).
+- Linux: `flutter create --platforms=linux` + `flutter build linux` is expected
+  to fail because the legacy `flutter_inappwebview` has no Linux backend. The
+  build log is uploaded as `legacy-linux-flutter-diagnostics`.
+
+These are not production artifacts. The native Windows client in `native/` is
+the shipping app.

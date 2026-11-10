@@ -1,0 +1,88 @@
+name: Legacy Flutter Builds
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "lib/**"
+      - "assets/**"
+      - "macos/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - ".env"
+      - "scripts/build_macos.sh"
+      - ".github/workflows/legacy-flutter.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: macOS (legacy Flutter)
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter 3.47.5
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.5"
+          cache: true
+
+      - name: Build macOS PKG and DMG
+        run: |
+          chmod +x scripts/build_macos.sh
+          ./scripts/build_macos.sh
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: legacy-macos-flutter
+          path: |
+            build/macos/*.pkg
+            build/macos/*.dmg
+          if-no-files-found: error
+
+  linux:
+    name: Linux (legacy Flutter, diagnostic)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter 3.47.5
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.5"
+          cache: true
+
+      - name: Install Linux desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
+
+      - name: Generate Linux runner
+        run: flutter create --platforms=linux .
+
+      - name: Build Linux app (expected to fail at flutter_inappwebview)
+        shell: bash
+        run: |
+          set -o pipefail
+          flutter pub get
+          flutter build linux --release 2>&1 | tee linux-build.log
+
+      - name: Upload Linux build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: legacy-linux-flutter-diagnostics
+          path: |
+            linux-build.log
+            build/linux
+          if-no-files-found: warn
