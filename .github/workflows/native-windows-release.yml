@@ -1,0 +1,123 @@
+name: Native Windows Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build (for example 2.0.0)"
+        required: false
+        default: "2.0.0"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: native-windows-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Determine version
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = "2.0.0"
+          if ($tag -match '^v(.+)$') {
+            $version = $Matches[1]
+          }
+          elseif ("${{ inputs.version }}") {
+            $version = "${{ inputs.version }}"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Building ARA Assessment $version"
+
+      - name: Install Inno Setup 6.4.3
+        shell: pwsh
+        run: |
+          $installer = Join-Path $env:RUNNER_TEMP "innosetup-6.4.3.exe"
+          Invoke-WebRequest `
+            -Uri "https://github.com/jrsoftware/issrc/releases/download/is-6_4_3/innosetup-6.4.3.exe" `
+            -OutFile $installer `
+            -UseBasicParsing
+          $expected = "F3C42116542C4CC57263C5BA6C4FEABFC49FE771F2F98A79D2F7628B8762723B"
+          $actual = (Get-FileHash $installer -Algorithm SHA256).Hash
+          if ($actual -ne $expected) {
+            throw "Inno Setup 6.4.3 checksum mismatch: $actual"
+          }
+          Start-Process -FilePath $installer `
+            -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-" `
+            -Wait
+
+      - name: Cache prerequisite payload
+        uses: actions/cache@v4
+        with:
+          path: native/installer/payload/prereq
+          key: ara-prereq-${{ hashFiles('native/scripts/download-payload.ps1') }}
+          restore-keys: |
+            ara-prereq-
+
+      - name: Validate release secrets
+        shell: pwsh
+        run: |
+          if (-not "${{ secrets.SUPERVISOR_PIN }}") {
+            Write-Warning "SUPERVISOR_PIN is not set; the supervisor panel will be disabled."
+          }
+          if (-not "${{ secrets.SIGNING_CERT_BASE64 }}") {
+            Write-Warning "SIGNING_CERT_BASE64 is not set; the release will be unsigned."
+          }
+
+      - name: Build, test, and package
+        shell: pwsh
+        env:
+          SUPERVISOR_PIN: ${{ secrets.SUPERVISOR_PIN }}
+          SIGNING_CERT_BASE64: ${{ secrets.SIGNING_CERT_BASE64 }}
+          SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
+        run: ./native/scripts/build.ps1 -Version "${{ steps.version.outputs.version }}"
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ara-assessment-windows-${{ steps.version.outputs.version }}
+          path: |
+            native/build/installer/ARA_Assessment_Setup_v${{ steps.version.outputs.version }}.exe
+            native/build/installer/SHA256SUMS.txt
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ARA Assessment Native ${{ steps.version.outputs.version }}
+          body: |
+            Native Windows client for ARA Assessment — rebuilt for Windows 7 SP1+ and old hardware.
+
+            - Native .NET Framework 4.8 + WebView2 shell
+            - Kiosk lockdown with Office allowlist and a build-time supervisor PIN
+            - Offline installer with .NET 4.8, VC++ 2015–2022, and WebView2 109 for Windows 7/8.1
+            - Built and released by GitHub Actions from tag ${{ github.ref_name }}
+
+            ... but better.
+          files: |
+            native/build/installer/ARA_Assessment_Setup_v${{ steps.version.outputs.version }}.exe
+            native/build/installer/SHA256SUMS.txt
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

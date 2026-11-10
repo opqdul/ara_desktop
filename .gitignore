@@ -45,3 +45,14 @@ app.*.map.json
 
 # FVM
 .fvm/
+
+# Command Code / local test artifacts
+.commandcode/
+result/
+*.zip
+
+# Native Windows rebuild
+native/**/bin/
+native/**/obj/
+native/build/
+native/installer/payload/

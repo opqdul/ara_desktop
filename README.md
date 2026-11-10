@@ -1,144 +1,134 @@
-# ARA Assessment - Flutter Cross-Platform Wrapper & Kiosk Security Guard
+# ARA Assessment — Native Windows Client
 
-Aplikasi wrapper cross-platform (Windows Desktop, macOS, Android, iOS) untuk portal asesmen **https://ara-assessment.com** dengan fitur proctoring kamera WebRTC dan proteksi Lockdown Kiosk berbasis Win32 Watchdog.
+A native Windows rebuild of the ARA Assessment desktop client for Windows 7 SP1+
+and old machines: .NET Framework 4.8 WinForms + WebView2, kiosk lockdown, an
+offline installer, and GitHub Actions releases... but better.
 
----
+The shipping Windows client lives in `native/`. The Flutter app at the repo root
+is legacy/reference and is not part of the Windows release.
 
-## 🚀 Fitur Utama
+## Support matrix
 
-1. **Clean Borderless Full-Bleed WebView**:
-   - Menghilangkan AppBar dan seluruh chrome bawaan browser/aplikasi.
-   - Menggunakan engine WebView modern (`flutter_inappwebview` v6) dengan WebView2 pada Windows.
+| OS | Architecture | Runtime |
+|---|---|---|
+| Windows 7 SP1 (with SHA-2 and TLS 1.2 updates) | x86 / x64 | WebView2 109.0.1518.140 |
+| Windows 8 / 8.1 | x86 / x64 | WebView2 109.0.1518.140 |
+| Windows 10 LTSC 2015 / 2016 / 2019 / 2021 | x64 | Evergreen WebView2 |
+| Windows 10 SAC 1709+ / 22H2 | x64 | Evergreen WebView2 |
+| Windows 11 (all current releases) | x64 | Evergreen WebView2 |
+| Windows 10 SAC 1511 / 1607 / 1703 | — | Not supported; installer refuses |
 
-2. **WebRTC Camera & Microphone Auto-Grant**:
-   - Otomatis memberikan izin kamera dan mikrofon saat web portal meminta akses webcam untuk proctoring (`navigator.mediaDevices.getUserMedia`).
-   - Telah dikonfigurasi pada Android Manifest (`CAMERA`, `RECORD_AUDIO`), macOS `Info.plist` & Entitlements, serta Windows WebView2 environment.
+The app also runs on low-end GPUs. If D3D11 feature level is below 10_0, it
+automatically asks WebView2 for software rendering.
 
-3. **Strict Assessment Lockdown (Ujian Reguler)**:
-   - Window otomatis **Fullscreen**, **Always-On-Top**, dan **PreventClose**.
-   - Background Watchdog memantau *foreground application* (setiap 400ms).
-   - Jika peserta mencoba membuka aplikasi lain (Chrome, Edge, Telegram, Discord, Notepad, dll.) atau melakukan Alt-Tab, aplikasi tersebut otomatis diminimalkan/diblokir dan fokus dikembalikan seketika ke ARA Assessment dengan banner peringatan.
+## What it does
 
-4. **Essay Assessment Whitelist (Mode Essay)**:
-   - Pada sesi ujian essay, peserta diizinkan membuka dan menggunakan **Microsoft Word (`WINWORD.EXE`)** dan **Microsoft PowerPoint (`POWERPNT.EXE`)**.
-   - Aplikasi non-whitelist (browser, chat, AI tools) tetap diblokir/diminimalkan secara otomatis.
+- Full-bleed WebView2 portal at `https://ara-assessment.com/assess`.
+- Camera/microphone auto-grant only for `ara-assessment.com`.
+- Normal and Exam modes. Exam mode maximizes the window, locks close/minimize/
+  resize controls, blocks unauthorized foreground applications, allows Word,
+  Excel, PowerPoint, WPS and LibreOffice, and reports violations to the portal.
+- Supervisor panel at `Ctrl+Shift+F12` or `Alt+F12`, protected by a build-time
+  PIN (3 attempts, 30-second lockout, audited actions).
+- Office document links and downloads, sanitized filenames, and a 24-hour
+  download cleanup.
+- File logging, startup diagnostics, and a specific error screen for every
+  failure class — never a blank window.
+- Single instance, per-machine install, desktop shortcut checked by default,
+  optional data deletion on uninstall.
 
-5. **Deteksi Otomatis & Supervisor Shortcut**:
-   - Mendeteksi route ujian (`/ujian`, `/assessment`, `/exam`, `/soal`, `/essay`) dan halaman selesai (`/selesai`, `/dashboard`, `/login`) secara otomatis melalui URL dan DOM Mutation Observer.
-   - **Shortcut Pengawas / Debugger**: Tekan `Ctrl + Shift + F12` atau `Alt + F12` (atau double-tap badge status) untuk membuka dialog kontrol manual pengawas (mengubah mode ke Normal, Strict, atau Essay, serta reload web).
+## Install
 
-6. **Mobile (Android & iOS): WebView + Word, Excel, PowerPoint**:
-   - Menu **Utilities** di top bar membuka Microsoft Word / Excel / PowerPoint (fallback ke Play Store / App Store bila belum terinstal).
-   - Link atau unduhan dokumen `.doc/.docx/.xls/.xlsx/.ppt/.pptx` dari portal otomatis diunduh (dengan cookie sesi login) lalu dibuka di aplikasi Office yang sesuai.
-     - **Android**: langsung terbuka di aplikasi Office (via `FileProvider`).
-     - **iOS**: muncul lembar **"Open in…"** sistem, pilih Word/Excel/PowerPoint (batasan iOS: aplikasi tidak bisa memilih aplikasi tujuan secara langsung). Bila Office belum terinstal, dokumen ditampilkan dalam pratinjau.
-   - Selama ujian, setelah Office dibuka peserta bebas berpindah ARA ⇄ Office sampai ujian selesai; berpindah ke aplikasi lain tanpa membuka Office tetap tercatat sebagai pelanggaran.
-   - Selama ujian hanya dokumen Office yang boleh dibuka; link `tel:`/`mailto:`/aplikasi lain diblokir.
-   - iOS: kamera/mikrofon proctoring memerlukan `NSCameraUsageDescription` & `NSMicrophoneUsageDescription` di `Info.plist` (sudah dikonfigurasi). Gesture swipe-back WebView dinonaktifkan.
+1. Uninstall the old Flutter/vendor ARA Assessment v1.x first (Apps & Features).
+   The installer refuses to coexist with it.
+2. Download `ARA_Assessment_Setup_v2.0.0.exe` from GitHub Releases.
+3. Verify it against `SHA256SUMS.txt`.
+4. Run it as administrator. The installer checks the OS build, Windows 7
+   SHA-2/servicing-stack updates, .NET 4.8, Visual C++ 2015–2022, WebView2
+   (109 on Windows 7/8.1), free disk space, the old app, and a running instance
+   before installing. It installs the offline prerequisites when needed and
+   enables TLS 1.2 on legacy Windows.
 
----
+The installer creates the Start Menu entry and checks **Create a desktop icon**
+by default.
 
-## 🛠️ Prasyarat & Lingkungan
+## Build
 
-- **Flutter**: 3.47.5 (Channel Stable)
-- **Dart**: 3.13.4
-- **FVM**: 4.x
-- **Target OS**: Windows 10/11 (Primary), macOS, Android, iOS
+Build host: Windows 10/11 with the .NET 8 SDK, PowerShell, and Inno Setup 6.4.x.
 
----
-
-## 💻 Cara Menjalankan
-
-### 1. Pastikan FVM Aktif
-```bash
-fvm use 3.47.5
+```powershell
+./native/scripts/build.ps1 -Version 2.0.0 -SupervisorPin "your-pin"
 ```
 
-### 2. Jalankan di Desktop Windows (Debug Mode)
-```bash
-fvm flutter run -d windows
-```
+The script restores, runs the 56 unit tests, builds x64 and x86, downloads and
+verifies the prerequisite payload, compiles the installer, signs when a
+certificate is supplied, and writes `SHA256SUMS.txt`.
 
-### 3. Jalankan di Android / macOS
-```bash
-fvm flutter run -d android
-# atau
-fvm flutter run -d macos
-```
-
-### 4. Menjalankan Unit Test
-```bash
-fvm flutter test
-```
-
-### 5. Build Release Windows Binary (.exe)
-```bash
-fvm flutter build windows --release
-```
-Hasil build akan berada di:  
-`build/windows/x64/runner/Release/`
-
-### 6. Build Release macOS (.pkg & .dmg Installer)
-Jalankan script otomatis untuk build release Universal (`arm64` + `x86_64`), code signing, notarization, serta generate `.pkg` (otomatis install ke `/Applications`) dan `.dmg`:
-```bash
-chmod +x scripts/build_macos.sh
-./scripts/build_macos.sh
-```
-Hasil installer akan berada di:  
-- `build/macos/ARA_Assessment_<version>.pkg` *(otomatis menginstal `ARA Assessment.app` langsung ke `/Applications` tanpa perlu ubah lokasi manual)*
-- `build/macos/ARA_Assessment_<version>.dmg`
-
-> **Catatan Installer macOS (`.pkg`)**:
-> - Menggunakan `pkgbuild --analyze` dengan `BundleIsRelocatable=false` dan `Distribution.xml` (`enable_localSystem="true"`, `enable_currentUserHome="false"`, `enable_anywhere="false"`, `rootVolumeOnly="true"`), sehingga macOS Installer selalu menginstal langsung ke `/Applications/ARA Assessment.app` secara otomatis dan tidak merelokasi ke folder `build/` atau `~/Applications`.
-
-### 7. Build iOS (wajib di Mac)
-iOS tidak dapat di-build dari Windows. Di Mac (Xcode terinstal), project memakai Swift Package Manager:
-```bash
-fvm flutter build ios --no-codesign
-# atau jalankan di iPhone:
-fvm flutter run -d <id-iphone>
-```
-Setelah mengubah key izin di `Info.plist`, hapus cache Xcode sekali agar `permission_handler` membaca ulang izin:
-`rm -rf ~/Library/Developer/Xcode/DerivedData`
-
----
-
-## 📂 Struktur Proyek
+Output:
 
 ```
-lib/
-├── main.dart                          # Inisialisasi WindowManager, KioskService, & Root Theme
-├── services/
-│   ├── kiosk_security_service.dart    # Win32 Watchdog & Enforcer + Mobile lifecycle / Office session
-│   ├── assessment_detector.dart       # Detektor URL route, DOM observer, & JS Bridge
-│   ├── office_launcher_service.dart   # Membuka Word/Excel/PowerPoint (Windows, macOS, Android, iOS)
-│   └── office_document_service.dart   # Unduh dokumen portal (cookie sesi) & buka di aplikasi Office (mobile)
-└── ui/
-    └── webview_screen.dart            # InAppWebView full-bleed, auto-grant kamera, dialog pengawas
-android/app/src/main/kotlin/.../
-├── MainActivity.kt                    # Channel ara_desktop/mobile_kiosk (FLAG_SECURE, launchPackage, openDocument)
-└── AraDocumentFileProvider.kt         # FileProvider untuk berbagi dokumen ke aplikasi Office
-ios/Runner/AppDelegate.swift           # AraMobileKioskPlugin: openDocument via "Open in…" sheet
-test/
-├── widget_test.dart                   # Unit test suite untuk KioskSecurityService & AssessmentDetector
-├── kiosk_security_policy_test.dart    # Kebijakan watchdog & lifecycle sesi Office mobile
-└── office_document_service_test.dart  # Deteksi jenis dokumen, nama file, & MIME
+native/build/installer/ARA_Assessment_Setup_v2.0.0.exe
+native/build/installer/SHA256SUMS.txt
 ```
 
----
+Use `-SkipPayload` to reuse an already-downloaded payload.
 
-## 🛡️ Integrasi Khusus Web (Opsional)
+## GitHub Actions release
 
-Jika tim web ara-assessment.com ingin mengontrol status ujian secara langsung melalui JavaScript (tanpa bergantung deteksi URL), cukup panggil fungsi berikut dari script web:
+`.github/workflows/native-windows-release.yml` builds, tests, signs, and
+publishes the release from a `v*` tag. The release is created by GitHub Actions;
+the commit and tag author remain the maintainer.
 
-```javascript
-// Mengaktifkan mode lockdown ketat (semua aplikasi lain diblokir)
-window.setAraAssessmentMode('strict');
+Add these repository secrets:
 
-// Mengaktifkan mode essay (Word & PowerPoint diizinkan)
-window.setAraAssessmentMode('essay');
+| Secret | Purpose |
+|---|---|
+| `SUPERVISOR_PIN` | Supervisor panel PIN. Hashed at build time; never shipped in plaintext. If omitted, the supervisor panel is disabled. |
+| `SIGNING_CERT_BASE64` | Base64-encoded PFX for Authenticode signing. If omitted, binaries are unsigned. |
+| `SIGNING_CERT_PASSWORD` | PFX password. |
 
-// Keluar dari mode ujian (kembali ke window normal)
-window.setAraAssessmentMode('normal');
+Release:
+
+```powershell
+git tag v2.0.0
+git push origin v2.0.0
 ```
-Aplikasi Flutter akan menangkap panggilan ini seketika.
+
+The workflow uploads the installer + `SHA256SUMS.txt` as artifacts and attaches
+them to the GitHub Release.
+
+## Runtime data
+
+| Data | Path |
+|---|---|
+| Logs | `%LOCALAPPDATA%\ARA Assessment\logs` |
+| WebView2 cache | `%LOCALAPPDATA%\ARA Assessment\WebView2Native` |
+| Downloads | `%USERPROFILE%\Documents\ARA Assessment\Downloads` |
+
+Diagnostics:
+
+```powershell
+& "C:\Program Files\ARA Assessment\ARA Assessment.exe" --diagnostics --quiet
+```
+
+Smoke test (login page render proof, writes `smoke-result.json` to the log
+folder):
+
+```powershell
+& "C:\Program Files\ARA Assessment\ARA Assessment.exe" --smoke-test
+```
+
+## Security notes
+
+- TLS validation is never bypassed; mixed content is blocked.
+- Dev flags are compile-time only; there is no editable `.env` in the shipped app.
+- Camera/microphone permissions are origin-scoped to `ara-assessment.com`.
+- Supervisor actions are audited; the panel requires the build-time PIN.
+- The kiosk is a user-mode deterrent, not a security boundary. Use Windows
+  policies or Assigned Access where a stronger boundary is required.
+
+## Legacy
+
+The Flutter code at the repository root is retained as reference only. The
+macOS Flutter release workflow has been removed; the production release is the
+native Windows client in `native/`.
