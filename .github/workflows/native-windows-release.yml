@@ -107,9 +107,9 @@ jobs:
           body: |
             Native Windows client for ARA Assessment — rebuilt for Windows 7 SP1+ and old hardware.
 
-            - Native .NET Framework 4.8 + WebView2 shell
+            - Native .NET Framework 4.6.2 + WebView2 shell
             - Kiosk lockdown with Office allowlist and a build-time supervisor PIN
-            - Offline installer with .NET 4.8, VC++ 2015–2022, and WebView2 109 for Windows 7/8.1
+            - Offline installer with .NET 4.6.2, VC++ 2015–2022, and WebView2 109 for Windows 7/8.1 and Windows 10 1511/1607/1703
             - Built and released by GitHub Actions from tag ${{ github.ref_name }}
 
             ... but better.

@@ -61,7 +61,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "payload\app-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb,runtimes,Microsoft.Web.WebView2.Wpf.dll"; Check: Is64BitInstallMode
 Source: "payload\app-x86\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb,runtimes,Microsoft.Web.WebView2.Wpf.dll"; Check: not Is64BitInstallMode
 
-Source: "payload\prereq\ndp48-x86-x64-allos-enu.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: NeedsDotNet48
+Source: "payload\prereq\NDP462-KB3151900-x86-x64-AllOS-ENU.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: NeedsDotNet462
 Source: "payload\prereq\VC_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: NeedsVcRedistX64
 Source: "payload\prereq\VC_redist.x86.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: NeedsVcRedistX86
 Source: "payload\prereq\MicrosoftEdgeStandaloneInstallerX64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: NeedsWebView2LegacyX64
@@ -81,7 +81,7 @@ Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{tmp}\ndp48-x86-x64-allos-enu.exe"; Parameters: "/q /norestart"; StatusMsg: "Memasang .NET Framework 4.8..."; Flags: waituntilterminated; Check: NeedsDotNet48
+Filename: "{tmp}\NDP462-KB3151900-x86-x64-AllOS-ENU.exe"; Parameters: "/q /norestart"; StatusMsg: "Memasang .NET Framework 4.6.2..."; Flags: waituntilterminated; Check: NeedsDotNet462
 Filename: "{tmp}\VC_redist.x64.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: "Memasang Visual C++ Runtime x64..."; Flags: waituntilterminated; Check: NeedsVcRedistX64
 Filename: "{tmp}\VC_redist.x86.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: "Memasang Visual C++ Runtime x86..."; Flags: waituntilterminated; Check: NeedsVcRedistX86
 Filename: "{tmp}\MicrosoftEdgeStandaloneInstallerX64.exe"; Parameters: "/installsource windowsupdate /install ""appguid={{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}&needsadmin=true"""; StatusMsg: "Memasang WebView2 Runtime 109 (x64)..."; Flags: waituntilterminated; Check: NeedsWebView2LegacyX64
@@ -113,6 +113,16 @@ end;
 function IsLegacyWindows(): Boolean;
 begin
   Result := OSVersion.Major < 10;
+end;
+
+function IsLegacyWindows10(): Boolean;
+begin
+  Result := (OSVersion.Major = 10) and (OSVersion.Build < 16299);
+end;
+
+function IsLegacyWebView2(): Boolean;
+begin
+  Result := (OSVersion.Major < 10) or IsLegacyWindows10();
 end;
 
 function HasCbsPackage(const Needle: String): Boolean;
@@ -171,14 +181,13 @@ begin
 
   if (OSVersion.Major = 10) then
   begin
-    if (OSVersion.Build >= 16299) or IsLtscEdition() then
+    if (OSVersion.Build >= 10586) or IsLtscEdition() then
     begin
       Result := True;
       Exit;
     end;
 
-    MsgBox('Windows 10 versi 1511/1607/1703 tidak didukung oleh WebView2.' + #13#10 +
-           'Gunakan Windows 10 1709 atau lebih baru, atau Windows 10 LTSC 2015/2016/2019/2021.',
+    MsgBox('Windows 10 versi ini tidak didukung. Diperlukan Windows 10 1511 (build 10586) atau lebih baru.',
            mbError, MB_OK);
     Exit;
   end;
@@ -286,12 +295,12 @@ begin
   Result := Pos('109.', Value) = 1;
 end;
 
-function NeedsDotNet48(): Boolean;
+function NeedsDotNet462(): Boolean;
 var
   Release: Cardinal;
 begin
   Result := not (RegQueryDWordValue(HKLM, 'SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full', 'Release', Release) and
-                 (Release >= 528040));
+                 (Release >= 394254));
 end;
 
 function NeedsVcRedistX64(): Boolean;
@@ -325,20 +334,20 @@ end;
 function NeedsWebView2LegacyX64(): Boolean;
 begin
   Result := Is64BitInstallMode and
-            (OSVersion.Major < 10) and
+            IsLegacyWebView2() and
             (not IsWebView2LegacyVersion(GetWebView2Version()));
 end;
 
 function NeedsWebView2LegacyX86(): Boolean;
 begin
   Result := (not Is64BitInstallMode) and
-            (OSVersion.Major < 10) and
+            IsLegacyWebView2() and
             (not IsWebView2LegacyVersion(GetWebView2Version()));
 end;
 
 function NeedsWebView2Modern(): Boolean;
 begin
-  Result := (OSVersion.Major >= 10) and (GetWebView2Version() = '');
+  Result := (not IsLegacyWebView2()) and (GetWebView2Version() = '');
 end;
 
 function PrerequisitesOk(): Boolean;
@@ -346,7 +355,7 @@ var
   Version: String;
 begin
   Result := False;
-  if NeedsDotNet48() then
+  if NeedsDotNet462() then
   begin
     Exit;
   end;
@@ -372,7 +381,7 @@ begin
     Exit;
   end;
 
-  if (OSVersion.Major < 10) and (not IsWebView2LegacyVersion(Version)) then
+  if IsLegacyWebView2() and (not IsWebView2LegacyVersion(Version)) then
   begin
     Exit;
   end;

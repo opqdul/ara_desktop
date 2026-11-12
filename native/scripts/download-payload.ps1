@@ -61,6 +61,11 @@ function Get-PayloadFile([string]$Name, [string]$Url, [string]$Sha256) {
 }
 
 Get-PayloadFile `
+    "NDP462-KB3151900-x86-x64-AllOS-ENU.exe" `
+    "https://go.microsoft.com/fwlink/?linkid=2099468" `
+    "8550E370DB2400AEDB4397E9958F12041DEF3BB63C03CC7625CE07E09F42303E"
+
+Get-PayloadFile `
     "ndp48-x86-x64-allos-enu.exe" `
     "https://go.microsoft.com/fwlink/?LinkId=2088631" `
     "0A3A390C47E639D0F7FC65B21195FEE6B7F65B066F80F70C60FAB191D14B7E40"

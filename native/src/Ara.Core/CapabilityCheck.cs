@@ -156,7 +156,7 @@ namespace Ara.Core
 
             if (!WebView2LegacyCompatible)
             {
-                return "WebView2 Runtime 109.0.1518.140 diperlukan pada Windows 7/8.1. " +
+                return "WebView2 Runtime 109.0.1518.140 diperlukan pada Windows 7/8.1 dan Windows 10 1511/1607/1703. " +
                        "Versi terdeteksi: " + WebView2Version + ".";
             }
 
@@ -204,9 +204,15 @@ namespace Ara.Core
                     return;
                 }
 
+                if (build >= 10586)
+                {
+                    report.OsSupported = true;
+                    return;
+                }
+
                 report.OsSupported = false;
-                report.OsError = "Windows 10 versi 1511/1607/1703 tidak didukung oleh WebView2. " +
-                                 "Gunakan Windows 10 1709 atau lebih baru, atau Windows 10 LTSC 2015/2016/2019/2021.";
+                report.OsError = "Windows 10 versi ini tidak didukung. " +
+                                 "Diperlukan Windows 10 versi 1511 (build 10586) atau lebih baru.";
                 return;
             }
 
